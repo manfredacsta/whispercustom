@@ -1,6 +1,27 @@
-flask==2.3.3
-flask-cors==4.0.0
-gunicorn==21.2.0
-openai-whisper==20231117
-werkzeug==2.3.7
-ffmpeg-python==0.2.0
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Crear un requirements.txt vacío si no existe
+RUN touch requirements.txt
+
+# Copiar los archivos de requisitos
+COPY requirements.txt* ./
+
+# Instalar las dependencias básicas y luego las del proyecto
+RUN pip install --no-cache-dir gunicorn flask openai-whisper
+
+# Si existe requirements.txt, instalar las dependencias adicionales
+RUN if [ -s requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+
+# Copiar el código de la aplicación
+COPY . .
+
+# Comando para ejecutar la aplicación
+CMD gunicorn app:app
