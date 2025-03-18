@@ -1,13 +1,23 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Añade esta línea
 import whisper
 import os
 import tempfile
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-CORS(app)  # Añade esta línea
 
+# Implementación manual de CORS
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+    return response
+
+# Ruta para manejar las solicitudes OPTIONS (pre-flight)
+@app.route('/transcribe', methods=['OPTIONS'])
+def handle_options():
+    return '', 200
 # Cargar el modelo de Whisper (puedes elegir entre 'tiny', 'base', 'small', 'medium', 'large')
 # 'tiny' o 'base' son recomendados para servidores gratuitos por su menor uso de recursos
 model = whisper.load_model("tiny")
