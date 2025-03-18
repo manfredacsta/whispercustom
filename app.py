@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Añade esta línea
 import whisper
 import os
 import tempfile
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+CORS(app)  # Añade esta línea
 
 # Cargar el modelo de Whisper (puedes elegir entre 'tiny', 'base', 'small', 'medium', 'large')
 # 'tiny' o 'base' son recomendados para servidores gratuitos por su menor uso de recursos
