@@ -1,0 +1,5 @@
+flask==2.3.3
+gunicorn==21.2.0
+openai-whisper==20231117
+werkzeug==2.3.7
+ffmpeg-python==0.2.0
