@@ -17,8 +17,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código de la aplicación
 COPY . .
 
-# Exponer el puerto que usará la aplicación
-EXPOSE $PORT
-
 # Comando para ejecutar la aplicación
-CMD gunicorn --bind 0.0.0.0:$PORT app:app
+CMD gunicorn app:app
