@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 import whisper
 import os
 import tempfile
+import json
+import traceback
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -31,42 +33,116 @@ def test():
 # Endpoint de eco para depuración
 @app.route('/echo', methods=['POST'])
 def echo():
-    print("Solicitud a /echo recibida")
-    data = request.form.to_dict()
-    files = {name: f.filename for name, f in request.files.items()}
-    headers = dict(request.headers)
+    print("===== NUEVA SOLICITUD A /echo =====")
+    print(f"Método: {request.method}")
+    print(f"URL: {request.url}")
     
-    print(f"Headers: {headers}")
-    print(f"Form data: {data}")
-    print(f"Files: {files}")
+    # Registrar todos los headers
+    print("Headers:")
+    for header, value in request.headers.items():
+        print(f"  {header}: {value}")
+    
+    # Registrar datos del formulario
+    print("Form data:")
+    for key, value in request.form.items():
+        print(f"  {key}: {value}")
+    
+    # Registrar archivos
+    print("Files:")
+    for name, file in request.files.items():
+        print(f"  {name}: {file.filename} (tipo: {file.content_type})")
+    
+    # Intentar obtener datos JSON
+    try:
+        json_data = request.get_json(silent=True)
+        print(f"JSON data: {json_data}")
+    except:
+        print("No JSON data")
+    
+    print("==========================")
+    
+    # Preparar respuesta
+    data = request.form.to_dict()
+    files = {name: {"filename": f.filename, "content_type": f.content_type} for name, f in request.files.items()}
+    headers = dict(request.headers)
     
     return jsonify({
         "message": "Echo endpoint",
         "received_data": data,
         "received_files": files,
-        "content_type": request.headers.get('Content-Type', 'No content type')
+        "content_type": request.headers.get('Content-Type', 'No content type'),
+        "method": request.method,
+        "url": request.url,
+        "args": request.args.to_dict()
     })
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
-    print("Solicitud a /transcribe recibida")
-    print(f"Headers: {dict(request.headers)}")
-    print(f"Form data: {request.form.to_dict()}")
-    print(f"Files: {list(request.files.keys())}")
+    print("===== NUEVA SOLICITUD A /transcribe =====")
+    print(f"Método: {request.method}")
+    print(f"URL: {request.url}")
+    
+    # Registrar todos los headers
+    print("Headers:")
+    for header, value in request.headers.items():
+        print(f"  {header}: {value}")
+    
+    # Registrar datos del formulario
+    print("Form data:")
+    for key, value in request.form.items():
+        print(f"  {key}: {value}")
+    
+    # Registrar archivos
+    print("Files:")
+    for name, file in request.files.items():
+        print(f"  {name}: {file.filename} (tipo: {file.content_type})")
+    
+    # Intentar obtener datos JSON
+    try:
+        json_data = request.get_json(silent=True)
+        print(f"JSON data: {json_data}")
+    except:
+        print("No JSON data")
+    
+    print("Content Type:", request.content_type)
+    print("==========================")
     
     # Verificar si hay un archivo en la solicitud
+    if not request.files:
+        print("No se encontraron archivos en la solicitud")
+        return jsonify({'error': 'No se encontraron archivos en la solicitud', 'request_info': {
+            'headers': dict(request.headers),
+            'form': request.form.to_dict(),
+            'files_keys': list(request.files.keys())
+        }}), 400
+    
     if 'file' not in request.files:
         print("No se encontró el campo 'file' en la solicitud")
-        return jsonify({'error': 'No se envió ningún archivo'}), 400
-    
-    file = request.files['file']
+        # Lista todos los nombres de archivo que sí se recibieron
+        available_files = list(request.files.keys())
+        
+        # Si hay algún archivo, usémoslo aunque no se llame 'file'
+        if available_files:
+            print(f"Usando el primer archivo disponible: {available_files[0]}")
+            file = request.files[available_files[0]]
+        else:
+            return jsonify({
+                'error': 'No se envió ningún archivo con el nombre "file"',
+                'available_files': available_files,
+                'request_info': {
+                    'headers': dict(request.headers),
+                    'form': request.form.to_dict()
+                }
+            }), 400
+    else:
+        file = request.files['file']
     
     # Verificar si se seleccionó un archivo
     if file.filename == '':
         print("El nombre del archivo está vacío")
         return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
     
-    print(f"Archivo recibido: {file.filename}")
+    print(f"Archivo recibido: {file.filename} (tipo: {file.content_type})")
     
     # Crear un archivo temporal para guardar el audio
     temp_dir = tempfile.mkdtemp()
@@ -76,19 +152,30 @@ def transcribe_audio():
         # Guardar el archivo
         file.save(temp_path)
         print(f"Archivo guardado en: {temp_path}")
+        print(f"Tamaño del archivo: {os.path.getsize(temp_path)} bytes")
         
         # Por ahora, simplemente confirma que recibió el archivo correctamente
         return jsonify({
             'success': True,
             'message': 'Archivo recibido correctamente',
             'filename': file.filename,
-            'file_size': os.path.getsize(temp_path)
+            'file_size': os.path.getsize(temp_path),
+            'content_type': file.content_type
         })
         
     except Exception as e:
         print(f"Error: {str(e)}")
+        print(traceback.format_exc())
         # En caso de error
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'request_info': {
+                'headers': dict(request.headers),
+                'form': request.form.to_dict(),
+                'files_keys': list(request.files.keys())
+            }
+        }), 500
     finally:
         # Limpiar archivos temporales
         try:
