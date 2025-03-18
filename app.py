@@ -37,9 +37,21 @@ def transcribe_audio():
     # Crear un archivo temporal para guardar el audio
     temp_dir = tempfile.mkdtemp()
     temp_path = os.path.join(temp_dir, secure_filename(file.filename))
-    file.save(temp_path)
     
     try:
+        # Guardar el archivo
+        file.save(temp_path)
+        
+        # Por ahora, simplemente confirma que recibió el archivo correctamente
+        # Esto es útil para probar si el problema está en la recepción del archivo
+        return jsonify({
+            'success': True,
+            'message': 'Archivo recibido correctamente',
+            'filename': file.filename
+        })
+        
+        # Cuando confirmes que esta parte funciona, puedes descomentar el código de transcripción:
+        """
         # Transcribir el audio con Whisper
         result = model.transcribe(temp_path, word_timestamps=True)
         
@@ -62,11 +74,10 @@ def transcribe_audio():
         os.rmdir(temp_dir)
         
         return jsonify(response)
+        """
     
     except Exception as e:
         # En caso de error
-        os.remove(temp_path)
-        os.rmdir(temp_dir)
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
